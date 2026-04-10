@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTS: Behind The Scene</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-clinical: #3b82f6;
+            --primary-dark: #1e40af;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-bts: #f8fafc;
+            --bg-card: #ffffff;
+            --surface: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-muted: #64748b;
+            --border-clinical: #e2e8f0;
+            --shadow-clinical: 0 10px 40px rgba(0, 0, 0, 0.06);
+            --shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.1);
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--bg-bts) 0%, #e0e7ff 100%);
+            padding: 30px;
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .bts-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            padding: 40px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-clinical);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bts-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary-clinical), var(--success), var(--danger));
+        }
+
+        h1 {
+            color: var(--text-primary);
+            border-bottom: 4px solid var(--primary-clinical);
+            padding-bottom: 16px;
+            margin-top: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        h1::before {
+            content: '👨‍⚕️';
+            font-size: 1.8rem;
+        }
+
+        .top-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .search-section {
+            display: flex;
+            gap: 16px;
+            background: var(--surface);
+            padding: 24px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-clinical);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            height: 100%;
+            align-items: center;
+        }
+
+        input {
+            flex: 1;
+            padding: 16px 20px;
+            border: 2px solid var(--border-clinical);
+            border-radius: var(--radius-md);
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-clinical);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary-clinical), #60a5fa);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+        }
+
+        .logic-explanation {
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            border-left: 6px solid var(--primary-clinical);
+            padding: 24px;
+            border-radius: var(--radius-md);
+            display: none;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1);
+            position: relative;
+            height: 100%;
+        }
+
+        .logic-explanation::before {
+            content: '🧮';
+            position: absolute;
+            top: 20px;
+            right: 24px;
+            font-size: 1.5rem;
+            opacity: 0.3;
+        }
+
+        #graphsRow {
+            display: none;
+            grid-template-columns: 2.2fr 1fr;
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .graph-card {
+            background: var(--bg-card);
+            padding: 30px;
+            border: 2px solid var(--border-clinical);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-clinical);
+            position: relative;
+        }
+
+        .graph-card::before {
+            position: absolute;
+            top: -12px;
+            left: 24px;
+            background: var(--bg-card);
+            padding: 0 16px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        #timelineContainer::before {
+            content: '📈 Clinical Timeline';
+        }
+
+        #cumulativeContainer::before {
+            content: '🥧 Overall Profile';
+        }
+
+        #splitViewContainer {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 20px;
+        }
+
+        #entriesList {
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .entry-card {
+            border: 1px solid var(--border-clinical);
+            border-radius: var(--radius-md);
+            padding: 18px;
+            margin-bottom: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .entry-card:hover {
+            border-color: var(--primary-clinical);
+            background: var(--surface);
+            transform: translateX(4px);
+        }
+
+        .entry-card.active {
+            border-color: var(--primary-clinical);
+            background: #eff6ff;
+            border-left: 5px solid var(--primary-clinical);
+        }
+
+        .sidebar-panel {
+            background: #1e293b;
+            color: white;
+            padding: 24px;
+            border-radius: var(--radius-lg);
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            box-shadow: var(--shadow-hover);
+        }
+
+        .tag {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .tag-high {
+            background: linear-gradient(135deg, var(--danger), #f87171);
+            animation: pulse 2s infinite;
+        }
+
+        .tag-normal {
+            background: linear-gradient(135deg, var(--success), #34d399);
+            color: #065f46;
+        }
+
+        .tag-warn {
+            background: linear-gradient(135deg, var(--warning), #fbbf24);
+            color: #92400e;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        #noDataMsg {
+            display: none;
+            text-align: center;
+            color: var(--text-muted);
+            padding: 60px 40px;
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            border: 2px dashed var(--border-clinical);
+            margin-top: 30px;
+        }
+
+        @media (max-width: 1024px) {
+
+            .top-grid,
+            #graphsRow,
+            #splitViewContainer {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bts-container">
+        <h1>👨‍🏫 BTS Dashboard | Clinical Oversight</h1>
+        <p style="color: #64748b; margin-top: -10px; font-weight: 500;">Clinical triage of PII-Sanitized data and
+            real-time behavioral insights.</p>
+
+        <div class="top-grid">
+            <div class="search-section">
+                <input type="text" id="studentEmail" placeholder="Search by student email (e.g., student@test.com)">
+                <button onclick="fetchBTSData()">Fetch Records</button>
+            </div>
+
+            <div id="logicBox" class="logic-explanation">
+                <div style="font-size: 16px; margin-bottom: 5px; font-weight: 600; color: var(--primary-dark);">📊
+                    Temporal Behavior Analysis</div>
+                <div id="riskStats"></div>
+            </div>
+        </div>
+
+        <div id="graphsRow">
+            <div id="timelineContainer" class="graph-card">
+                <canvas id="riskChart" style="max-height: 280px;"></canvas>
+            </div>
+
+            <div id="cumulativeContainer" class="graph-card">
+                <canvas id="cumulativeChart" style="max-height: 280px;"></canvas>
+            </div>
+        </div>
+
+        <div id="splitViewContainer">
+            <div>
+                <h3
+                    style="margin-top: 0; color: var(--text-primary); border-bottom: 2px solid var(--border-clinical); padding-bottom: 10px;">
+                    📝 Journal History</h3>
+                <div id="entriesList"></div>
+            </div>
+
+            <div id="instantAnalysisSidebar" class="sidebar-panel">
+                <h3
+                    style="margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 12px; color: #f8fafc; font-size: 1.2rem;">
+                    🔍 Individual Post Probability</h3>
+
+                <div style="margin-bottom: 24px;">
+                    <canvas id="singlePostChart" style="max-height: 250px;"></canvas>
+                </div>
+
+                <div
+                    style="background: #0f172a; padding: 16px; border-radius: var(--radius-sm); border: 1px solid #334155;">
+                    <strong style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">PII-Scrubbed
+                        Text:</strong>
+                    <p id="scrubbedTextDisplay"
+                        style="font-size: 14px; font-family: monospace; color: #e2e8f0; max-height: 150px; overflow-y: auto; margin-top: 8px;">
+                        Select a journal entry from the list to analyze.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div id="noDataMsg"></div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://kqxfcgvliqkuoyubisto.supabase.co';
+        const supabaseKey = 'sb_publishable_17s7gTIOHDvJ9n3P9uvF3w_o2nVS6Qx';
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let riskChart = null;
+        let cumulativeChart = null;
+        let singlePostChart = null;
+
+        async function fetchBTSData() {
+            const email = document.getElementById('studentEmail').value.trim();
+            const logicBox = document.getElementById('logicBox');
+            const graphsRow = document.getElementById('graphsRow');
+            const splitView = document.getElementById('splitViewContainer');
+            const noData = document.getElementById('noDataMsg');
+
+            if (!email) return alert("Please enter an email address.");
+
+            const { data: profile, error: profileErr } = await supabaseClient.from('profiles').select('email').eq('email', email).maybeSingle();
+
+            if (profileErr || !profile) {
+                hideAll(); noData.style.display = 'block'; noData.innerHTML = `<strong>Error:</strong> The email <u>${email}</u> is not registered.`; return;
+            }
+
+            const { data, error } = await supabaseClient.from('user_history').select('*').eq('user_id', email).order('date', { ascending: true });
+
+            if (error || !data || data.length === 0) {
+                hideAll(); noData.style.display = 'block'; noData.innerHTML = `<strong>User Found:</strong> <u>${email}</u> has no journal entries yet.`; return;
+            }
+
+            noData.style.display = 'none'; logicBox.style.display = 'block'; graphsRow.style.display = 'grid'; splitView.style.display = 'grid';
+
+            renderRiskGraph(data);
+            renderCumulativeGraph(data);
+
+            const reversedData = [...data].reverse();
+            renderEntriesList(reversedData);
+            updateTemporalLogic(reversedData); // Passing the reversed data (newest first)
+
+            document.getElementById('scrubbedTextDisplay').innerText = "Select a journal entry from the list to analyze.";
+            if (singlePostChart) singlePostChart.destroy();
+        }
+
+        function hideAll() {
+            document.getElementById('logicBox').style.display = 'none'; document.getElementById('graphsRow').style.display = 'none'; document.getElementById('splitViewContainer').style.display = 'none';
+        }
+
+        // ==========================================
+        // TIERED TEMPORAL BEHAVIOR ALERT SYSTEM
+        // ==========================================
+        function updateTemporalLogic(reversedData) {
+            const lastSeven = reversedData.slice(0, 7);
+
+            const suicidalCount = lastSeven.filter(e => e.prediction === 'Suicidal').length;
+            const depressionCount = lastSeven.filter(e => e.prediction === 'Depression').length;
+            const anxietyStressCount = lastSeven.filter(e => e.prediction === 'Anxiety' || e.prediction === 'Stress').length;
+
+            let statusHtml = '';
+            let logicHtml = '';
+
+            // SCENARIO 1: Critical (Emergency)
+            if (suicidalCount >= 1) {
+                statusHtml = '<span style="color:var(--danger)">🚨 CRITICAL RISK (Emergency)</span>';
+                logicHtml = `Found ${suicidalCount} Suicidal flag(s) in recent history. Immediate intervention recommended.`;
+            }
+            // SCENARIO 2: High Risk (Depressive Trend)
+            else if ((suicidalCount + depressionCount) >= 3) {
+                statusHtml = '<span style="color:var(--danger)">⚠️ HIGH RISK (Depressive Trend)</span>';
+                logicHtml = `Found ${suicidalCount + depressionCount} high-risk flags in the last ${lastSeven.length} samples.`;
+            }
+            // SCENARIO 3: Observe (Chronic Stress / Simmer Effect)
+            else if (anxietyStressCount >= 5) {
+                statusHtml = '<span style="color:var(--warning)">👀 OBSERVE (Chronic Stress/Anxiety)</span>';
+                logicHtml = `Found ${anxietyStressCount} stress/anxiety flags in the last ${lastSeven.length} samples. Risk of burnout.`;
+            }
+            // SCENARIO 4: Stable
+            else {
+                statusHtml = '<span style="color:var(--success)">✅ STABLE</span>';
+                logicHtml = `Behavioral baseline is within normal parameters over the last ${lastSeven.length} samples.`;
+            }
+
+            document.getElementById('riskStats').innerHTML = `
+                <strong style="color: var(--text-primary);">Status:</strong> ${statusHtml}<br>
+                <span style="color: var(--text-muted);">${logicHtml}</span>
+            `;
+        }
+
+        function renderRiskGraph(data) {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            if (riskChart) riskChart.destroy();
+
+            const labels = data.map(d => new Date(d.date).toLocaleDateString());
+            const scores = data.map(d => d.confidence);
+
+            const pointSettings = data.map(d => {
+                if (d.prediction === 'Suicidal') return { color: '#ef4444', shape: 'triangle', size: 8 };
+                if (d.prediction === 'Depression') return { color: '#f59e0b', shape: 'rect', size: 7 };
+                if (d.prediction === 'Anxiety') return { color: '#fbbf24', shape: 'rectRot', size: 6 };
+                if (d.prediction === 'Stress') return { color: '#3b82f6', shape: 'circle', size: 6 };
+                if (d.prediction === 'Normal') return { color: '#10b981', shape: 'circle', size: 4 };
+                return { color: '#94a3b8', shape: 'circle', size: 4 };
+            });
+
+            riskChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Certainty (%)',
+                        data: scores,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                        borderWidth: 2, tension: 0.3, fill: true,
+                        pointBackgroundColor: pointSettings.map(s => s.color),
+                        pointBorderColor: pointSettings.map(s => s.color),
+                        pointStyle: pointSettings.map(s => s.shape),
+                        pointRadius: pointSettings.map(s => s.size),
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
+            });
+        }
+
+        function renderCumulativeGraph(data) {
+            const ctx = document.getElementById('cumulativeChart').getContext('2d');
+            if (cumulativeChart) cumulativeChart.destroy();
+
+            const counts = { 'Suicidal': 0, 'Depression': 0, 'Anxiety': 0, 'Stress': 0, 'Normal': 0 };
+            data.forEach(d => {
+                if (counts[d.prediction] !== undefined) counts[d.prediction]++;
+                else counts[d.prediction] = 1;
+            });
+
+            const activeLabels = Object.keys(counts).filter(key => counts[key] > 0);
+            const activeValues = activeLabels.map(key => counts[key]);
+
+            const bgColors = activeLabels.map(label => {
+                if (label === 'Suicidal') return '#ef4444';
+                if (label === 'Depression') return '#f59e0b';
+                if (label === 'Anxiety') return '#fbbf24';
+                if (label === 'Stress') return '#3b82f6';
+                if (label === 'Normal') return '#10b981';
+                return '#94a3b8';
+            });
+
+            cumulativeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: activeLabels,
+                    datasets: [{ data: activeValues, backgroundColor: bgColors, borderWidth: 2, borderColor: '#ffffff' }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '65%',
+                    plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11, family: 'Inter' } } } }
+                }
+            });
+        }
+
+        function renderEntriesList(reversedData) {
+            let listHtml = '';
+            reversedData.forEach((row, index) => {
+                const dateObj = new Date(row.date);
+                const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                let tagClass = 'tag-normal';
+                if (row.prediction === 'Depression' || row.prediction === 'Suicidal') tagClass = 'tag-high';
+                else if (row.prediction !== 'Normal') tagClass = 'tag-warn';
+
+                listHtml += `
+                    <div class="entry-card" id="card-${index}" onclick="analyzeThisPost(${index}, '${row.sanitized_text}')">
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <span class="tag ${tagClass}">${row.prediction}</span>
+                            <span style="color: var(--text-muted); font-size: 13px; font-weight: 500;">${dateStr}</span>
+                        </div>
+                        <div style="font-size: 18px; color: var(--text-muted);">➔</div>
+                    </div>`;
+            });
+            document.getElementById('entriesList').innerHTML = listHtml;
+        }
+
+        async function analyzeThisPost(index, encryptedScrubbedText) {
+            document.querySelectorAll('.entry-card').forEach(c => c.classList.remove('active'));
+            document.getElementById(`card-${index}`).classList.add('active');
+            const textDisplay = document.getElementById('scrubbedTextDisplay');
+            textDisplay.innerText = "Running Secure Decryption & Analysis...";
+
+            try {
+                const res = await fetch('http://localhost:8000/single_analysis', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ encrypted_text: encryptedScrubbedText })
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+
+                textDisplay.innerText = data.decrypted_scrubbed_text;
+                renderSinglePostGraph(data.distribution);
+
+            } catch (err) {
+                textDisplay.innerText = "[Secured Analysis Failure - Ensure API /single_analysis is running]";
+            }
+        }
+
+        function renderSinglePostGraph(distribution) {
+            const ctx = document.getElementById('singlePostChart').getContext('2d');
+            if (singlePostChart) singlePostChart.destroy();
+
+            const dynamicLabels = distribution.map(item => item.label);
+            const dynamicScores = distribution.map(item => Math.round(item.probability * 100));
+
+            const bgColors = distribution.map(item => {
+                if (item.label === 'Suicidal') return '#ef4444';
+                if (item.label === 'Depression') return '#f59e0b';
+                if (item.label === 'Anxiety') return '#fbbf24';
+                if (item.label === 'Stress') return '#3b82f6';
+                if (item.label === 'Normal') return '#10b981';
+                return '#94a3b8';
+            });
+
+            singlePostChart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: dynamicLabels, datasets: [{ label: 'Probability (%)', data: dynamicScores, backgroundColor: bgColors, borderRadius: 4 }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, color: '#f8fafc', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, max: 100, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }, y: { grid: { display: false }, ticks: { color: '#f8fafc', font: { weight: '600', family: 'Inter' } } } } }
+            });
+        }
+    </script>
+</body>
+
+</html>

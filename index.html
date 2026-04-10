@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>An Integrated NLP System for Early, Privacy-Aware Mental Health Risk Assessment</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-calm: #4a90e2;
+            --primary-dark: #2c5282;
+            --success: #48bb78;
+            --warning: #ed8936;
+            --danger: #f56565;
+            --bg-light: #f8fafc;
+            --bg-card: #ffffff;
+            --surface: #edf2f7;
+            --text-primary: #2d3748;
+            --text-muted: #718096;
+            --border-light: #e2e8f0;
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.12);
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-light) 0%, #e6fffa 100%);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            background: var(--bg-card);
+            padding: 40px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-soft);
+            width: 100%;
+            max-width: 800px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-calm), var(--success));
+            border-radius: var(--radius) var(--radius) 0 0;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: var(--text-primary);
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, var(--primary-calm), #7dd3fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h1::after {
+            content: '🧠';
+            display: block;
+            font-size: 2rem;
+            margin-top: 0.5rem;
+        }
+
+        input,
+        textarea,
+        button {
+            width: 100%;
+            padding: 16px;
+            margin-top: 12px;
+            border-radius: var(--radius-sm);
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            border: 2px solid var(--border-light);
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-calm);
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+
+        textarea {
+            height: 140px;
+            resize: none;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary-calm), #7dd3fc);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(74, 144, 226, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-light);
+            margin: 30px 0;
+            position: relative;
+        }
+
+        hr::before {
+            content: 'or';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            padding: 0 20px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        #appSection {
+            display: none;
+        }
+
+        /* New Tiered Alert System Styles */
+        .temporal-alert {
+            padding: 20px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 25px;
+            font-weight: 600;
+            text-align: center;
+            display: none;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        .alert-red {
+            background: linear-gradient(135deg, #fed7d7, #feb2b2);
+            color: #c53030;
+            border: 1px solid #fc8181;
+        }
+
+        .alert-yellow {
+            background: linear-gradient(135deg, #fefcbf, #fef08a);
+            color: #975a16;
+            border: 1px solid #f6e05e;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, var(--danger), #fc8181) !important;
+            width: auto;
+            float: right;
+            margin-bottom: 20px;
+            padding: 12px 20px;
+        }
+
+        .feed-container {
+            margin-top: 40px;
+            border-top: 2px solid var(--border-light);
+            padding-top: 30px;
+        }
+
+        .original-card {
+            background: linear-gradient(145deg, #ffffff, #f8fafc);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-soft);
+            position: relative;
+        }
+
+        .original-card::before {
+            content: '📝';
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            opacity: 0.1;
+            font-size: 2rem;
+            pointer-events: none;
+        }
+
+        .original-date {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .original-text {
+            line-height: 1.7;
+            color: var(--text-primary);
+            font-size: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div id="loginSection">
+            <h1>📔 An Integrated NLP System for Early, Privacy-Aware Mental Health Risk Assessment</h1>
+            <button onclick="signInWithGoogle()"
+                style="background:white; color:#444; border:1px solid #ccc; display:flex; align-items:center; justify-content:center; gap:10px;">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" width="20"> Sign in with Google
+            </button>
+            <hr>
+            <input type="email" id="emailInput" placeholder="Email Address">
+            <input type="password" id="passwordInput" placeholder="Password (min 6 chars)">
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button onclick="signInWithEmail()" style="background-color: #95a5a6;">Sign In</button>
+                <button onclick="signUpWithEmail()" style="background-color: #2ecc71;">Create Account</button>
+            </div>
+        </div>
+
+        <div id="appSection">
+            <button onclick="signOut()" class="logout-btn">Log Out</button>
+            <div style="clear: both;"></div>
+
+            <div id="temporalAlertBox" class="temporal-alert"></div>
+
+            <h2>How are you feeling today?</h2>
+            <textarea id="userInput" placeholder="Write your thoughts here..."></textarea>
+            <button onclick="analyzeText()" id="analyzeBtn">Save Entry</button>
+
+            <div class="feed-container">
+                <h3>Past Posts</h3>
+                <div id="originalFeed"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://kqxfcgvliqkuoyubisto.supabase.co';
+        const supabaseKey = 'sb_publishable_17s7gTIOHDvJ9n3P9uvF3w_o2nVS6Qx';
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        let currentUser = null;
+
+        async function syncProfile() {
+            if (!currentUser) return;
+            const { data } = await supabaseClient.from('profiles').select('email').eq('email', currentUser.email).single();
+            if (!data) await supabaseClient.from('profiles').insert([{ id: currentUser.id, email: currentUser.email }]);
+        }
+
+        function showApp() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('appSection').style.display = 'block';
+            syncProfile(); loadOriginalFeed(); runBackgroundAnalysis();
+        }
+
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (session) { currentUser = session.user; showApp(); }
+            else { document.getElementById('loginSection').style.display = 'block'; document.getElementById('appSection').style.display = 'none'; }
+        });
+
+        async function signInWithGoogle() { await supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } }); }
+        async function signInWithEmail() { const { error } = await supabaseClient.auth.signInWithPassword({ email: document.getElementById('emailInput').value, password: document.getElementById('passwordInput').value }); if (error) alert(error.message); }
+        async function signUpWithEmail() { const { error } = await supabaseClient.auth.signUp({ email: document.getElementById('emailInput').value, password: document.getElementById('passwordInput').value }); if (error) alert(error.message); else alert("Check email or log in!"); }
+        async function signOut() { await supabaseClient.auth.signOut(); }
+
+        async function analyzeText() {
+            const text = document.getElementById('userInput').value;
+            const btn = document.getElementById('analyzeBtn');
+            if (!text) return alert("Please write something.");
+            btn.innerText = "Encrypting & Saving..."; btn.disabled = true;
+
+            try {
+                const res = await fetch('http://localhost:8000/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text }) });
+                const aiData = await res.json();
+
+                await supabaseClient.from('user_history').insert([{
+                    user_id: currentUser.email, date: new Date().toISOString(),
+                    original_text: aiData.encrypted_original, sanitized_text: aiData.encrypted_sanitized,
+                    prediction: aiData.top_prediction, confidence: aiData.top_confidence
+                }]);
+
+                document.getElementById('userInput').value = '';
+                loadOriginalFeed(); runBackgroundAnalysis();
+            } catch (e) { alert("Connection Error: Is your Python API running?"); }
+            finally { btn.innerText = "Save Entry"; btn.disabled = false; }
+        }
+
+        async function loadOriginalFeed() {
+            if (!currentUser) return;
+            const feedDiv = document.getElementById('originalFeed');
+            const { data, error } = await supabaseClient.from('user_history').select('date, original_text').eq('user_id', currentUser.email).order('date', { ascending: false });
+
+            if (error || !data || data.length === 0) { feedDiv.innerHTML = '<p style="text-align: center; color: #95a5a6;">No entries yet. Write your first thought above!</p>'; return; }
+
+            let html = '';
+            for (const [index, entry] of data.entries()) {
+                try {
+                    const decRes = await fetch('http://localhost:8000/decrypt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: entry.original_text }) });
+                    const decData = await decRes.json();
+                    const fullText = decData.decrypted_text || "[Decryption Error]";
+
+                    const isLong = fullText.length > 150;
+                    const shortText = isLong ? fullText.substring(0, 150) + "..." : fullText;
+                    const encodedFull = btoa(unescape(encodeURIComponent(fullText)));
+                    const encodedShort = btoa(unescape(encodeURIComponent(shortText)));
+                    const displayDate = new Date(entry.date).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+                    html += `<div class="original-card"><div class="original-date">${displayDate}</div><div class="original-text"><span id="user-text-${index}">${shortText}</span>${isLong ? `<button data-full="${encodedFull}" data-short="${encodedShort}" onclick="toggleUserReadMore(this, ${index})" style="all: unset; color: #3498db; cursor: pointer; font-size: 13px; font-weight: bold; margin-left: 5px;">Read More</button>` : ''}</div></div>`;
+                } catch (err) { console.error("Decryption failed:", err); }
+            }
+            feedDiv.innerHTML = html;
+        }
+
+        function toggleUserReadMore(btn, id) {
+            const textSpan = document.getElementById(`user-text-${id}`);
+            const full = decodeURIComponent(escape(atob(btn.getAttribute('data-full'))));
+            const short = decodeURIComponent(escape(atob(btn.getAttribute('data-short'))));
+            if (btn.innerText === "Read More") { textSpan.innerText = full; btn.innerText = "Read Less"; }
+            else { textSpan.innerText = short; btn.innerText = "Read More"; }
+        }
+
+        // ==========================================
+        // TIERED TEMPORAL BEHAVIOR ALERT SYSTEM
+        // ==========================================
+        async function runBackgroundAnalysis() {
+            const { data } = await supabaseClient.from('user_history').select('prediction').eq('user_id', currentUser.email).order('date', { ascending: false }).limit(7);
+
+            // Require a baseline of at least 5 posts
+            if (data && data.length >= 5) {
+                const suicidalCount = data.filter(e => e.prediction === 'Suicidal').length;
+                const depressionCount = data.filter(e => e.prediction === 'Depression').length;
+                const anxietyStressCount = data.filter(e => e.prediction === 'Anxiety' || e.prediction === 'Stress').length;
+
+                const box = document.getElementById('temporalAlertBox');
+                box.className = 'temporal-alert'; // Reset classes
+
+                let showAlert = false;
+
+                // SCENARIO 1 & 2: Critical or High Risk (Red)
+                if (suicidalCount >= 1 || (suicidalCount + depressionCount) >= 3) {
+                    box.classList.add('alert-red');
+                    box.innerHTML = `🩺 <strong>Clinical Alert:</strong> We've noticed you've been feeling deeply overwhelmed recently. Please consider talking to someone you trust or a professional.`;
+                    showAlert = true;
+                }
+                // SCENARIO 3: Chronic Precursor / Simmer Effect (Yellow)
+                else if (anxietyStressCount >= 5) {
+                    box.classList.add('alert-yellow');
+                    box.innerHTML = `🧘 <strong>Gentle Check-in:</strong> It looks like you've been carrying a lot of stress or anxiety lately. Remember to take a moment to breathe and rest.`;
+                    showAlert = true;
+                }
+
+                // Display logic
+                if (showAlert) {
+                    box.style.display = 'block';
+                    box.style.opacity = '1';
+                    // Disappear after 8 seconds
+                    setTimeout(() => { box.style.opacity = '0'; setTimeout(() => box.style.display = 'none', 1000); }, 8000);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
