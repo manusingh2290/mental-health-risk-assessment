@@ -7,14 +7,17 @@ import spacy
 import re
 import emoji
 from cryptography.fernet import Fernet
+import os
+from dotenv import load_dotenv
 
 app = FastAPI()
 
 # Allow the frontend to communicate with this API
 app.add_middleware(
     CORSMiddleware, 
-    allow_origins=["*"], 
-    allow_methods=["*"], 
+    # Add your local development port, and eventually your live frontend URL
+    allow_origins=["http://localhost:5500", "http://127.0.0.1:5500", "https://your-future-domain.com"], 
+    allow_methods=["GET", "POST"], # Restrict to only what you use
     allow_headers=["*"]
 )
 
@@ -22,7 +25,8 @@ app.add_middleware(
 # 1. ENCRYPTION SETUP (AES-128)
 # ==========================================
 # In a real production app, save this key in a secure .env file!
-MASTER_KEY = b'uXz7_Y8z9L0aBcDeFgHiJkLmNoPqRsTuVwXyZ123456=' 
+load_dotenv() # Loads variables from a .env file
+MASTER_KEY = os.getenv("MASTER_KEY").encode()
 cipher_suite = Fernet(MASTER_KEY)
 
 # ==========================================

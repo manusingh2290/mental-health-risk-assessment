@@ -1,6 +1,15 @@
-__pycache__/
-*.env
+# Security
+.env
+
+# Python Virtual Environments
 venv/
 env/
+__pycache__/
+*.pyc
+
+# AI Model Weights
 final_mental_health_model/
 final_mental_health_model_1/
+*.bin
+*.safetensors
+*.pt
