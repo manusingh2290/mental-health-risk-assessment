@@ -36,7 +36,7 @@ cipher_suite = Fernet(MASTER_KEY)
 nlp = spacy.load("en_core_web_sm")
 
 # HuggingFace Transformer for Mental Health Classification
-model_path = "./final_mental_health_model_1"
+model_path = "singhdaleep/mental-health-model"
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 model = AutoModelForSequenceClassification.from_pretrained(model_path)
 
