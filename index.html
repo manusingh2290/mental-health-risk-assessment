@@ -309,7 +309,7 @@
             btn.innerText = "Encrypting & Saving..."; btn.disabled = true;
 
             try {
-                const res = await fetch('http://localhost:8000/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text }) });
+                const res = await fetch('https://singhdaleep-mental-health-risk-assessment.hf.space/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text }) });
                 const aiData = await res.json();
 
                 await supabaseClient.from('user_history').insert([{
@@ -334,7 +334,7 @@
             let html = '';
             for (const [index, entry] of data.entries()) {
                 try {
-                    const decRes = await fetch('http://localhost:8000/decrypt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: entry.original_text }) });
+                    const decRes = await fetch('https://singhdaleep-mental-health-risk-assessment.hf.space/decrypt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: entry.original_text }) });
                     const decData = await decRes.json();
                     const fullText = decData.decrypted_text || "[Decryption Error]";
 
