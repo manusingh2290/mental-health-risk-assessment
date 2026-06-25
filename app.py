@@ -26,7 +26,7 @@ def load_nlp_models():
         st.stop()
         
     # Load Hugging Face Model (Ensure this folder exists in the same directory)
-    model_path = "./final_mental_health_model_1" 
+    model_path = "singhdaleep/mental-health-model"
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
     
